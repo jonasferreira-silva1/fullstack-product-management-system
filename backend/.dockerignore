@@ -1,0 +1,13 @@
+# Ignora node_modules local — o Docker instala as suas próprias dependências
+node_modules
+dist
+
+# Variáveis de ambiente locais
+.env
+.env.*
+
+# Arquivos de desenvolvimento
+*.md
+.git
+.gitignore
+coverage

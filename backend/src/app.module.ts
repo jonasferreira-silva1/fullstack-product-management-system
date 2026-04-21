@@ -8,6 +8,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { AuditModule } from './audit/audit.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UploadModule } from './upload/upload.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -26,5 +27,6 @@ import { UploadModule } from './upload/upload.module';
     NotificationsModule,
     UploadModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

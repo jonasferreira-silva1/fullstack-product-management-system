@@ -5,10 +5,10 @@ import type { NextRequest } from 'next/server';
 const PUBLIC_ROUTES = ['/login'];
 
 /**
- * Middleware do Next.js — redireciona rotas não autenticadas para o login.
- * Verifica a presença do token JWT no cookie da requisição.
+ * Proxy do Next.js 16 — substitui o middleware para proteção de rotas.
+ * Redireciona rotas não autenticadas para o login verificando o cookie JWT.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value;
   const { pathname } = request.nextUrl;
 
@@ -30,7 +30,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Aplica o middleware em todas as rotas exceto arquivos estáticos e API
+// Aplica em todas as rotas exceto arquivos estáticos e API interna do Next
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
 };
