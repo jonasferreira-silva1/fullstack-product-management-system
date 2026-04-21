@@ -3,9 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Role } from '@prisma/client';
 
-// Include padrão para produtos
 const PRODUCT_INCLUDE = {
   creator: { select: { id: true, name: true } },
   categories: { include: { category: { select: { id: true, name: true } } } },
@@ -13,7 +13,10 @@ const PRODUCT_INCLUDE = {
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(dto: CreateProductDto, userId: string) {
     const { categoryIds = [], ...data } = dto;
@@ -22,7 +25,6 @@ export class ProductsService {
       data: {
         ...data,
         createdBy: userId,
-        // Cria as relações N:N com categorias
         categories: {
           create: categoryIds.map((categoryId) => ({ categoryId })),
         },
@@ -38,9 +40,7 @@ export class ProductsService {
     const where: Record<string, unknown> = {};
     if (name) where.name = { contains: name, mode: 'insensitive' };
     if (createdBy) where.createdBy = createdBy;
-    if (categoryId) {
-      where.categories = { some: { categoryId } };
-    }
+    if (categoryId) where.categories = { some: { categoryId } };
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.product.findMany({
@@ -70,13 +70,20 @@ export class ProductsService {
       throw new ForbiddenException('Sem permissão para editar este produto');
     }
 
+    // Notifica o dono se outro usuário editou
+    await this.notificationsService.notificarDono({
+      editorId: userId,
+      ownerId: product.createdBy,
+      entidade: 'produto',
+      entidadeNome: product.name,
+    });
+
     const { categoryIds, ...data } = dto;
 
     return this.prisma.product.update({
       where: { id },
       data: {
         ...data,
-        // Se categoryIds foi enviado, recria as relações
         ...(categoryIds !== undefined && {
           categories: {
             deleteMany: {},
@@ -103,24 +110,17 @@ export class ProductsService {
 
   async addFavorite(productId: string, userId: string) {
     await this.findOne(productId);
-
-    // upsert evita erro se já favoritou
     await this.prisma.favorite.upsert({
       where: { userId_productId: { userId, productId } },
       create: { userId, productId },
       update: {},
     });
-
     return { message: 'Produto adicionado aos favoritos' };
   }
 
   async removeFavorite(productId: string, userId: string) {
     await this.findOne(productId);
-
-    await this.prisma.favorite.deleteMany({
-      where: { userId, productId },
-    });
-
+    await this.prisma.favorite.deleteMany({ where: { userId, productId } });
     return { message: 'Produto removido dos favoritos' };
   }
 
@@ -130,7 +130,6 @@ export class ProductsService {
       include: { product: { include: PRODUCT_INCLUDE } },
       orderBy: { createdAt: 'desc' },
     });
-
     return favorites.map((f) => f.product);
   }
 }

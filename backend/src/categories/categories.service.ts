@@ -3,11 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { QueryCategoryDto } from './dto/query-category.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Role } from '@prisma/client';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(dto: CreateCategoryDto, userId: string) {
     return this.prisma.category.create({
@@ -45,10 +49,17 @@ export class CategoriesService {
   async update(id: string, dto: UpdateCategoryDto, userId: string, userRole: Role) {
     const category = await this.findOne(id);
 
-    // Apenas o criador ou ADMIN pode editar
     if (category.createdBy !== userId && userRole !== Role.ADMIN) {
       throw new ForbiddenException('Sem permissão para editar esta categoria');
     }
+
+    // Notifica o dono se outro usuário editou
+    await this.notificationsService.notificarDono({
+      editorId: userId,
+      ownerId: category.createdBy,
+      entidade: 'categoria',
+      entidadeNome: category.name,
+    });
 
     return this.prisma.category.update({
       where: { id },

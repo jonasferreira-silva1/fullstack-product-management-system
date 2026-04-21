@@ -47,6 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: 'Categorias', href: '/dashboard/categories', icon: 'pi pi-tag' },
     { label: 'Produtos', href: '/dashboard/products', icon: 'pi pi-box' },
     { label: 'Favoritos', href: '/dashboard/favorites', icon: 'pi pi-star' },
+    { label: 'Notificações', href: '/dashboard/notifications', icon: 'pi pi-bell' },
     ...(usuario?.role === 'ADMIN' ? [
       { label: 'Usuários', href: '/dashboard/users', icon: 'pi pi-users' },
       { label: 'Relatórios', href: '/dashboard/reports', icon: 'pi pi-chart-bar' },
