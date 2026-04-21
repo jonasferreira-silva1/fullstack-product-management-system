@@ -37,14 +37,37 @@ async function bootstrap() {
   // ─────────────────────────────────────────
   const config = new DocumentBuilder()
     .setTitle('Desafio Técnico API')
-    .setDescription('API REST completa com autenticação JWT, CRUD de usuários, produtos e categorias')
+    .setDescription(`
+## API REST — Sistema de Gerenciamento de Produtos
+
+### Autenticação
+Use **POST /api/auth/login** para obter o \`access_token\` e clique em **Authorize** (cadeado) para autenticar.
+
+### Credenciais de teste
+- **Email:** admin@desafio.com
+- **Senha:** Admin@123
+
+### Perfis
+- **ADMIN** — acesso total: usuários, relatórios, auditoria
+- **USER** — cadastra produtos/categorias, favorita produtos
+
+### Módulos
+- \`/auth\` — Login e dados do usuário autenticado
+- \`/users\` — CRUD de usuários (ADMIN)
+- \`/categories\` — CRUD de categorias
+- \`/products\` — CRUD de produtos + favoritos
+- \`/notifications\` — Notificações do usuário
+- \`/audit\` — Logs de auditoria (ADMIN)
+- \`/reports\` — Relatórios e dashboard (ADMIN)
+- \`/upload\` — Upload de avatar e imagem de produto
+    `)
     .setVersion('1.0')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Insira o token JWT aqui',
+        description: 'Cole o access_token retornado pelo login',
       },
       'JWT-auth',
     )

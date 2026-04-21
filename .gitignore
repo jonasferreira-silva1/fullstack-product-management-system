@@ -1,7 +1,5 @@
 # Dependências
 node_modules/
-.pnp
-.pnp.js
 
 # Build
 dist/
@@ -15,10 +13,7 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
-# Mas o .env.example DEVE ser commitado (sem valores reais)
-.env.development.local
-.env.test.local
-.env.production.local
+# .env.example DEVE ser commitado (sem valores reais)
 
 # Logs
 npm-debug.log*
@@ -37,7 +32,10 @@ Thumbs.db
 *.swo
 
 # Uploads locais (arquivos enviados pelos usuários)
-backend/uploads/*
+backend/uploads/avatars/*
+backend/uploads/products/*
+!backend/uploads/avatars/.gitkeep
+!backend/uploads/products/.gitkeep
 !backend/uploads/.gitkeep
 
 # Prisma
