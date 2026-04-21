@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────
+# Stage 1: Build
+# ─────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npx prisma generate
+RUN npm run build
+
+# ─────────────────────────────────────────
+# Stage 2: Produção (imagem enxuta)
+# ─────────────────────────────────────────
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/prisma ./prisma
+
+# Pasta de uploads persistente
+RUN mkdir -p uploads
+
+EXPOSE 3001
+
+# Executa migrations e inicia a aplicação
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]

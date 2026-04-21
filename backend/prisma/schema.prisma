@@ -1,0 +1,153 @@
+// Configuração do gerador de cliente Prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Configuração da fonte de dados PostgreSQL
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// Enum de perfis de usuário
+// ─────────────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+}
+
+// ─────────────────────────────────────────
+// Enum de ações para auditoria
+// ─────────────────────────────────────────
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// ─────────────────────────────────────────
+// Tabela de usuários
+// ─────────────────────────────────────────
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos
+  products      Product[]
+  categories    Category[]
+  favorites     Favorite[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// Tabela de categorias
+// ─────────────────────────────────────────
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Categoria pertence ao usuário criador
+  createdBy   String @map("created_by")
+  creator     User   @relation(fields: [createdBy], references: [id])
+
+  // Relacionamento N:N com produtos
+  products ProductCategory[]
+
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────
+// Tabela de produtos
+// ─────────────────────────────────────────
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Produto pertence ao usuário criador
+  createdBy String @map("created_by")
+  creator   User   @relation(fields: [createdBy], references: [id])
+
+  // Relacionamentos
+  categories ProductCategory[]
+  favorites  Favorite[]
+
+  @@map("products")
+}
+
+// ─────────────────────────────────────────
+// Tabela de junção produto-categoria (N:N)
+// ─────────────────────────────────────────
+model ProductCategory {
+  productId  String @map("product_id")
+  categoryId String @map("category_id")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@map("product_categories")
+}
+
+// ─────────────────────────────────────────
+// Tabela de favoritos do usuário
+// ─────────────────────────────────────────
+model Favorite {
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId])
+  @@map("favorites")
+}
+
+// ─────────────────────────────────────────
+// Tabela de logs de auditoria
+// ─────────────────────────────────────────
+model AuditLog {
+  id        String      @id @default(uuid())
+  action    AuditAction
+  entity    String      // Nome da entidade (ex: "Product", "Category")
+  entityId  String      @map("entity_id")
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  // Usuário que realizou a ação
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────
+// Tabela de notificações
+// ─────────────────────────────────────────
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Usuário que receberá a notificação
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
