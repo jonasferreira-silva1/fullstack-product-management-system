@@ -1,63 +1,117 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { logout } from '@/lib/auth';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { GovBar, AdminUserBar, Toast, ToastRef, Badge } from '@uigovpe/components';
+import { logout, getToken } from '@/lib/auth';
+import api from '@/lib/api';
+import type { User } from '@/types/auth';
 
 /**
- * Layout compartilhado do dashboard com navegação lateral.
+ * Layout do dashboard usando componentes UIGovPE.
+ * Inclui GovBar, AdminUserBar com menu de navegação e badge de notificações.
  */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
+  const toast = useRef<ToastRef>(null);
+  const [usuario, setUsuario] = useState<User | null>(null);
+  const [notificacoes, setNotificacoes] = useState(0);
 
-  const links = [
-    { href: '/dashboard', label: '🏠 Início' },
-    { href: '/dashboard/categories', label: '🏷️ Categorias' },
-    { href: '/dashboard/products', label: '📦 Produtos' },
-    { href: '/dashboard/favorites', label: '⭐ Favoritos' },
-    { href: '/dashboard/users', label: '👥 Usuários' },
+  useEffect(() => {
+    if (!getToken()) { router.push('/login'); return; }
+
+    api.get<User>('/auth/me')
+      .then((res) => setUsuario(res.data))
+      .catch(() => logout());
+  }, [router]);
+
+  // Polling de notificações a cada 30s
+  useEffect(() => {
+    if (!getToken()) return;
+
+    async function buscarNotificacoes() {
+      try {
+        const res = await api.get<{ total: number }>('/notifications/unread-count');
+        setNotificacoes(res.data.total);
+      } catch { /* silencioso */ }
+    }
+
+    buscarNotificacoes();
+    const interval = setInterval(buscarNotificacoes, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const menuItems = [
+    { label: 'Início', href: '/dashboard', icon: 'pi pi-home' },
+    { label: 'Categorias', href: '/dashboard/categories', icon: 'pi pi-tag' },
+    { label: 'Produtos', href: '/dashboard/products', icon: 'pi pi-box' },
+    { label: 'Favoritos', href: '/dashboard/favorites', icon: 'pi pi-star' },
+    ...(usuario?.role === 'ADMIN' ? [
+      { label: 'Usuários', href: '/dashboard/users', icon: 'pi pi-users' },
+      { label: 'Relatórios', href: '/dashboard/reports', icon: 'pi pi-chart-bar' },
+    ] : []),
   ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      {/* Sidebar */}
-      <aside style={{ width: '220px', backgroundColor: '#1351b4', color: '#fff', padding: '1.5rem 0', flexShrink: 0 }}>
-        <div style={{ padding: '0 1rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
-          <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Desafio Técnico</h2>
-        </div>
-        <nav style={{ marginTop: '1rem' }}>
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              style={{
-                display: 'block',
-                padding: '0.625rem 1rem',
-                color: '#fff',
-                textDecoration: 'none',
-                backgroundColor: pathname === link.href ? 'rgba(255,255,255,0.15)' : 'transparent',
-                fontWeight: pathname === link.href ? 600 : 400,
-                fontSize: '0.9rem',
-              }}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div style={{ position: 'absolute', bottom: '1rem', left: 0, width: '220px', padding: '0 1rem' }}>
-          <button
-            onClick={logout}
-            style={{ width: '100%', padding: '0.5rem', backgroundColor: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.875rem' }}
-          >
-            Sair
-          </button>
-        </div>
-      </aside>
+    <>
+      <Toast ref={toast} />
+
+      {/* Barra do governo de Pernambuco */}
+      <GovBar />
+
+      {/* Barra do usuário admin com menu */}
+      <AdminUserBar
+        user={usuario ? { name: usuario.name, profile: usuario.role } : { name: '', profile: '' }}
+        menuActions={menuItems.map((item) => ({
+          label: item.label,
+          icon: <i className={item.icon} />,
+          command: () => router.push(item.href),
+        }))}
+      />
 
       {/* Conteúdo principal */}
-      <main style={{ flex: 1, padding: '2rem', backgroundColor: '#f5f5f5', overflowY: 'auto' }}>
-        {children}
-      </main>
-    </div>
+      <div style={{ display: 'flex', minHeight: 'calc(100vh - 112px)' }}>
+        {/* Sidebar de navegação */}
+        <aside style={{
+          width: '220px',
+          backgroundColor: '#1351b4',
+          flexShrink: 0,
+          padding: '1rem 0',
+        }}>
+          <nav>
+            {menuItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  color: '#fff',
+                  textDecoration: 'none',
+                  backgroundColor: pathname === item.href ? 'rgba(255,255,255,0.2)' : 'transparent',
+                  fontWeight: pathname === item.href ? 600 : 400,
+                  fontSize: '0.9rem',
+                  borderLeft: pathname === item.href ? '3px solid #fff' : '3px solid transparent',
+                }}
+              >
+                <i className={item.icon} style={{ fontSize: '1rem' }} />
+                {item.label}
+                {item.label === 'Notificações' && notificacoes > 0 && (
+                  <Badge value={notificacoes} severity="danger" style={{ marginLeft: 'auto' }} />
+                )}
+              </a>
+            ))}
+          </nav>
+        </aside>
+
+        {/* Área de conteúdo */}
+        <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', backgroundColor: '#f5f5f5' }}>
+          {children}
+        </main>
+      </div>
+    </>
   );
 }

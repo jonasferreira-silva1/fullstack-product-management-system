@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { Card, Button, Tag, Toast, ToastRef, Typography } from '@uigovpe/components';
 import api from '@/lib/api';
 import type { Product } from '@/types';
 
 export default function FavoritesPage() {
+  const toast = useRef<ToastRef>(null);
   const [produtos, setProdutos] = useState<Product[]>([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -18,8 +20,13 @@ export default function FavoritesPage() {
   }
 
   async function removerFavorito(id: string) {
-    await api.delete(`/products/${id}/favorite`);
-    setProdutos((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await api.delete(`/products/${id}/favorite`);
+      setProdutos((prev) => prev.filter((p) => p.id !== id));
+      toast.current?.show({ severity: 'success', summary: 'Removido', detail: 'Produto removido dos favoritos.', life: 3000 });
+    } catch {
+      toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível remover.', life: 3000 });
+    }
   }
 
   useEffect(() => { carregar(); }, []);
@@ -27,36 +34,40 @@ export default function FavoritesPage() {
   if (carregando) return <p>Carregando...</p>;
 
   return (
-    <div>
-      <h1 style={{ color: '#1351b4', marginBottom: '1.5rem' }}>⭐ Meus Favoritos</h1>
+    <>
+      <Toast ref={toast} />
+      <Typography variant="h1" style={{ color: '#1351b4', marginBottom: '1.5rem' }}>⭐ Meus Favoritos</Typography>
 
       {produtos.length === 0 ? (
-        <div style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '3rem', textAlign: 'center', color: '#888' }}>
+        <Card style={{ textAlign: 'center', padding: '3rem', color: '#888' }}>
+          <i className="pi pi-star" style={{ fontSize: '2rem', marginBottom: '1rem', display: 'block', color: '#ccc' }} />
           <p>Você ainda não favoritou nenhum produto.</p>
-        </div>
+        </Card>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
           {produtos.map((p) => (
-            <div key={p.id} style={{ backgroundColor: '#fff', borderRadius: '8px', padding: '1.25rem', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+            <Card key={p.id} style={{ padding: '1.25rem' }}>
               <h3 style={{ margin: '0 0 0.5rem', color: '#1351b4' }}>{p.name}</h3>
-              {p.description && <p style={{ margin: '0 0 0.75rem', color: '#666', fontSize: '0.875rem' }}>{p.description}</p>}
-              <div style={{ marginBottom: '0.75rem' }}>
+              {p.description && (
+                <p style={{ margin: '0 0 0.75rem', color: '#666', fontSize: '0.875rem' }}>{p.description}</p>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginBottom: '1rem' }}>
                 {p.categories.map((c) => (
-                  <span key={c.category.id} style={{ display: 'inline-block', backgroundColor: '#e8f0fe', color: '#1351b4', borderRadius: '12px', padding: '0.1rem 0.5rem', fontSize: '0.75rem', marginRight: '0.25rem' }}>
-                    {c.category.name}
-                  </span>
+                  <Tag key={c.category.id} value={c.category.name} />
                 ))}
               </div>
-              <button
+              <Button
+                label="Remover favorito"
+                icon="pi pi-star-fill"
+                severity="danger"
+                outlined
+                size="small"
                 onClick={() => removerFavorito(p.id)}
-                style={{ backgroundColor: 'transparent', border: '1px solid #e52207', color: '#e52207', borderRadius: '4px', padding: '0.25rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem' }}
-              >
-                Remover favorito
-              </button>
-            </div>
+              />
+            </Card>
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

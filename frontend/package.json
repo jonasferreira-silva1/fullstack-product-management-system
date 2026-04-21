@@ -9,19 +9,21 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@uigovpe/components": "^1.1.38",
+    "@uigovpe/styles": "^1.1.19",
+    "axios": "^1.7.2",
+    "js-cookie": "^3.0.5",
     "next": "16.2.4",
     "react": "^19",
-    "react-dom": "^19",
-    "axios": "^1.7.2",
-    "js-cookie": "^3.0.5"
+    "react-dom": "^19"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/js-cookie": "^3.0.6",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4"
+    "eslint-config-next": "16.2.4",
+    "typescript": "^5"
   }
 }
