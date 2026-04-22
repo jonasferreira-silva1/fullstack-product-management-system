@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body style={{ margin: 0, fontFamily: 'sans-serif', backgroundColor: '#f5f5f5' }}>
+    <html lang="pt-BR" className="light">
+      <body style={{ margin: 0, fontFamily: 'sans-serif', backgroundColor: '#f5f5f5', colorScheme: 'light' }}>
         <UiGovPEProvider>{children}</UiGovPEProvider>
       </body>
     </html>

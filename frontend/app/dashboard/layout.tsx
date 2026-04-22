@@ -7,10 +7,6 @@ import { logout, getToken } from '@/lib/auth';
 import api from '@/lib/api';
 import type { User } from '@/types/auth';
 
-/**
- * Layout do dashboard usando componentes UIGovPE.
- * Inclui GovBar, AdminUserBar com menu de navegação e badge de notificações.
- */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -20,7 +16,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!getToken()) { router.push('/login'); return; }
-
     api.get<User>('/auth/me')
       .then((res) => setUsuario(res.data))
       .catch(() => logout());
@@ -29,14 +24,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Polling de notificações a cada 30s
   useEffect(() => {
     if (!getToken()) return;
-
     async function buscarNotificacoes() {
       try {
         const res = await api.get<{ total: number }>('/notifications/unread-count');
         setNotificacoes(res.data.total);
       } catch { /* silencioso */ }
     }
-
     buscarNotificacoes();
     const interval = setInterval(buscarNotificacoes, 30000);
     return () => clearInterval(interval);
@@ -48,38 +41,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: 'Produtos', href: '/dashboard/products', icon: 'pi pi-box' },
     { label: 'Favoritos', href: '/dashboard/favorites', icon: 'pi pi-star' },
     { label: 'Notificações', href: '/dashboard/notifications', icon: 'pi pi-bell' },
+    { label: 'Meu Perfil', href: '/dashboard/profile', icon: 'pi pi-user' },
     ...(usuario?.role === 'ADMIN' ? [
       { label: 'Usuários', href: '/dashboard/users', icon: 'pi pi-users' },
       { label: 'Relatórios', href: '/dashboard/reports', icon: 'pi pi-chart-bar' },
     ] : []),
   ];
 
+  // Menu do AdminUserBar inclui navegação + separador + sair
+  const adminBarActions = [
+    ...menuItems.map((item) => ({
+      label: item.label,
+      icon: <i className={item.icon} />,
+      command: () => router.push(item.href),
+    })),
+    // Separador visual
+    {
+      label: '─────────────',
+      icon: <></>,
+      command: () => {},
+    },
+    // Botão de logout
+    {
+      label: 'Sair',
+      icon: <i className="pi pi-sign-out" style={{ color: '#e52207' }} />,
+      command: logout,
+    },
+  ];
+
   return (
     <>
       <Toast ref={toast} />
-
-      {/* Barra do governo de Pernambuco */}
       <GovBar />
 
-      {/* Barra do usuário admin com menu */}
       <AdminUserBar
         user={usuario ? { name: usuario.name, profile: usuario.role } : { name: '', profile: '' }}
-        menuActions={menuItems.map((item) => ({
-          label: item.label,
-          icon: <i className={item.icon} />,
-          command: () => router.push(item.href),
-        }))}
+        menuActions={adminBarActions}
       />
 
-      {/* Conteúdo principal */}
       <div style={{ display: 'flex', minHeight: 'calc(100vh - 112px)' }}>
-        {/* Sidebar de navegação */}
+        {/* Sidebar */}
         <aside style={{
           width: '220px',
           backgroundColor: '#1351b4',
           flexShrink: 0,
           padding: '1rem 0',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}>
+          {/* Links de navegação */}
           <nav>
             {menuItems.map((item) => (
               <a
@@ -106,9 +117,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </a>
             ))}
           </nav>
+
+          {/* Botão de logout na parte inferior da sidebar */}
+          <button
+            onClick={logout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem 1rem',
+              color: '#fff',
+              background: 'rgba(229,34,7,0.25)',
+              border: 'none',
+              borderTop: '1px solid rgba(255,255,255,0.2)',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              width: '100%',
+              textAlign: 'left',
+            }}
+          >
+            <i className="pi pi-sign-out" style={{ fontSize: '1rem' }} />
+            Sair
+          </button>
         </aside>
 
-        {/* Área de conteúdo */}
         <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', backgroundColor: '#f5f5f5' }}>
           {children}
         </main>

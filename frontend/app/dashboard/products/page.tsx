@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import {
   Button, InputSearch, Card, Table, Column,
   Paginator, Dialog, InputText, InputTextarea,
-  MultiSelect, Toast, ToastRef, Tag, Chip, Typography,
+  MultiSelect, Toast, ToastRef, Tag, Typography,
 } from '@uigovpe/components';
 import api from '@/lib/api';
 import type { Product, Category, PaginatedResponse } from '@/types';
@@ -19,6 +19,10 @@ export default function ProductsPage() {
   const [dialogAberto, setDialogAberto] = useState(false);
   const [editando, setEditando] = useState<Product | null>(null);
   const [form, setForm] = useState({ name: '', description: '', categoryIds: [] as string[] });
+  // Estado para upload de imagem
+  const [imagemSelecionada, setImagemSelecionada] = useState<File | null>(null);
+  const [uploadando, setUploadando] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function carregar() {
     const params = new URLSearchParams({ page: String(page + 1), limit: '10' });
@@ -39,27 +43,47 @@ export default function ProductsPage() {
   function abrirCriar() {
     setEditando(null);
     setForm({ name: '', description: '', categoryIds: [] });
+    setImagemSelecionada(null);
     setDialogAberto(true);
   }
 
   function abrirEditar(p: Product) {
     setEditando(p);
     setForm({ name: p.name, description: p.description ?? '', categoryIds: p.categories.map((c) => c.category.id) });
+    setImagemSelecionada(null);
     setDialogAberto(true);
   }
 
   async function salvar() {
     try {
+      let produtoId: string;
+
       if (editando) {
         await api.patch(`/products/${editando.id}`, form);
+        produtoId = editando.id;
         toast.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Produto atualizado!', life: 3000 });
       } else {
-        await api.post('/products', form);
+        const res = await api.post<Product>('/products', form);
+        produtoId = res.data.id;
         toast.current?.show({ severity: 'success', summary: 'Sucesso', detail: 'Produto criado!', life: 3000 });
       }
+
+      // Se há imagem selecionada, faz o upload após salvar
+      if (imagemSelecionada && produtoId) {
+        setUploadando(true);
+        const formData = new FormData();
+        formData.append('file', imagemSelecionada);
+        await api.post(`/upload/product/${produtoId}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        toast.current?.show({ severity: 'success', summary: 'Imagem', detail: 'Imagem enviada com sucesso!', life: 3000 });
+        setUploadando(false);
+      }
+
       setDialogAberto(false);
       carregar();
     } catch {
+      setUploadando(false);
       toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Não foi possível salvar.', life: 3000 });
     }
   }
@@ -86,6 +110,16 @@ export default function ProductsPage() {
 
   const categoriasOptions = categories.map((c) => ({ label: c.name, value: c.id }));
   const filtroOptions = [{ label: 'Todas as categorias', value: '' }, ...categoriasOptions];
+
+  const imagemTemplate = (row: Product) => (
+    row.imageUrl ? (
+      <img
+        src={`http://localhost:3001${row.imageUrl}`}
+        alt={row.name}
+        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+      />
+    ) : <span style={{ color: '#ccc', fontSize: '0.75rem' }}>Sem imagem</span>
+  );
 
   const categoriasTemplate = (row: Product) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
@@ -131,6 +165,7 @@ export default function ProductsPage() {
 
       <Card>
         <Table value={data?.data ?? []} emptyMessage="Nenhum produto encontrado">
+          <Column header="Imagem" body={imagemTemplate} style={{ width: '70px' }} />
           <Column field="name" header="Nome" />
           <Column header="Categorias" body={categoriasTemplate} />
           <Column field="creator.name" header="Criador" />
@@ -147,7 +182,7 @@ export default function ProductsPage() {
         )}
       </Card>
 
-      {/* Dialog criar/editar */}
+      {/* Dialog criar/editar com upload de imagem */}
       <Dialog
         header={editando ? 'Editar Produto' : 'Novo Produto'}
         visible={dialogAberto}
@@ -156,7 +191,12 @@ export default function ProductsPage() {
         footer={
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <Button label="Cancelar" outlined onClick={() => setDialogAberto(false)} />
-            <Button label="Salvar" onClick={salvar} disabled={!form.name.trim()} />
+            <Button
+              label={uploadando ? 'Enviando imagem...' : 'Salvar'}
+              loading={uploadando}
+              onClick={salvar}
+              disabled={!form.name.trim() || uploadando}
+            />
           </div>
         }
       >
@@ -178,6 +218,41 @@ export default function ProductsPage() {
               placeholder="Selecione as categorias"
               style={{ width: '100%' }}
             />
+          </div>
+
+          {/* Upload de imagem do produto */}
+          <div>
+            <label style={{ fontWeight: 600, fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>
+              Imagem do produto
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }}
+                onChange={(e) => setImagemSelecionada(e.target.files?.[0] ?? null)}
+              />
+              <Button
+                label="Selecionar imagem"
+                icon="pi pi-upload"
+                outlined
+                size="small"
+                onClick={() => fileInputRef.current?.click()}
+              />
+              {imagemSelecionada && (
+                <span style={{ fontSize: '0.8rem', color: '#555' }}>
+                  <i className="pi pi-check" style={{ color: '#2e7d32', marginRight: '0.25rem' }} />
+                  {imagemSelecionada.name}
+                </span>
+              )}
+              {!imagemSelecionada && editando?.imageUrl && (
+                <span style={{ fontSize: '0.8rem', color: '#888' }}>Imagem atual mantida</span>
+              )}
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.25rem 0 0' }}>
+              JPG, PNG ou WebP — máx. 5MB
+            </p>
           </div>
         </div>
       </Dialog>

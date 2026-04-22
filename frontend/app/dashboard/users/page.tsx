@@ -106,6 +106,7 @@ export default function UsersPage() {
         visible={dialogAberto}
         onHide={() => setDialogAberto(false)}
         style={{ width: '420px' }}
+        contentStyle={{ overflow: 'visible' }}
         footer={
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <Button label="Cancelar" outlined onClick={() => setDialogAberto(false)} />
@@ -128,7 +129,23 @@ export default function UsersPage() {
           </div>
           <div>
             <label style={{ fontWeight: 600, fontSize: '0.875rem', display: 'block', marginBottom: '0.25rem' }}>Perfil</label>
-            <Dropdown value={form.role} options={roleOptions} onChange={(e) => setForm({ ...form, role: e.value })} style={{ width: '100%' }} />
+            {/* Select nativo para evitar problema de overflow do Dropdown dentro do Dialog */}
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.625rem 0.75rem',
+                border: '1px solid #ced4da',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                backgroundColor: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="USER">USER</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
           </div>
         </div>
       </Dialog>

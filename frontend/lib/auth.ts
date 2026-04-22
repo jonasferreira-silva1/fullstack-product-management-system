@@ -1,45 +1,42 @@
 import api from './api';
 import type { LoginForm, LoginResponse } from '@/types/auth';
 
-/**
- * Funções utilitárias de autenticação no cliente.
- */
-
-// Chave usada para armazenar o token no localStorage
 const TOKEN_KEY = 'access_token';
 
 /**
- * Realiza o login e armazena o token JWT.
+ * Salva o token em cookie (para o proxy.ts) e localStorage (para o Axios).
  */
+function salvarToken(token: string) {
+  // Cookie acessível pelo proxy do Next.js (sem httpOnly para poder ler no cliente)
+  document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+  // localStorage para o interceptor do Axios
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+/**
+ * Remove o token do cookie e localStorage.
+ */
+function removerToken() {
+  document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
+  localStorage.removeItem(TOKEN_KEY);
+}
+
 export async function login(data: LoginForm): Promise<LoginResponse> {
   const response = await api.post<LoginResponse>('/auth/login', data);
-  const { access_token, user } = response.data;
-
-  // Armazena o token para uso nas próximas requisições
-  localStorage.setItem(TOKEN_KEY, access_token);
-
+  salvarToken(response.data.access_token);
   return response.data;
 }
 
-/**
- * Remove o token e redireciona para o login.
- */
 export function logout(): void {
-  localStorage.removeItem(TOKEN_KEY);
+  removerToken();
   window.location.href = '/login';
 }
 
-/**
- * Retorna o token armazenado ou null.
- */
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
-/**
- * Verifica se o usuário está autenticado.
- */
 export function isAuthenticated(): boolean {
   return !!getToken();
 }

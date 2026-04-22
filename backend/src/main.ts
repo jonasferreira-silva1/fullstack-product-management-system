@@ -20,10 +20,12 @@ async function bootstrap() {
     }),
   );
 
-  // Habilita CORS para o frontend
+  // Habilita CORS — aceita requisições do frontend
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: true, // Aceita qualquer origem (seguro para desenvolvimento)
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Serve arquivos estáticos de uploads (avatars e imagens de produtos)

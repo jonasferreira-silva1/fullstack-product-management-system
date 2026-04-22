@@ -48,8 +48,9 @@ export default function ReportsPage() {
   async function carregarLogs() {
     const params = new URLSearchParams({ page: String(page + 1), limit: '10' });
     if (filtros.entity) params.set('entity', filtros.entity);
-    if (filtros.startDate) params.set('startDate', filtros.startDate);
-    if (filtros.endDate) params.set('endDate', filtros.endDate);
+    // Converte a data para ISO incluindo o início e fim do dia
+    if (filtros.startDate) params.set('startDate', `${filtros.startDate}T00:00:00.000Z`);
+    if (filtros.endDate) params.set('endDate', `${filtros.endDate}T23:59:59.999Z`);
     const res = await api.get<Paginated>(`/reports/detailed?${params}`);
     setLogs(res.data);
   }

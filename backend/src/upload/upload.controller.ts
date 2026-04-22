@@ -86,7 +86,15 @@ export class UploadController {
 
     const url = `/uploads/products/${file.filename}`;
 
-    // Atualiza o imageUrl do produto no banco
+    // Verifica se o produto existe antes de atualizar
+    const produto = await this.prisma.product.findUnique({ where: { id: productId } });
+    if (!produto) {
+      // Remove o arquivo enviado para não deixar lixo
+      const fs = await import('fs');
+      fs.unlink(file.path, () => {});
+      throw new BadRequestException(`Produto com ID "${productId}" não encontrado. Use um ID válido.`);
+    }
+
     await this.prisma.product.update({
       where: { id: productId },
       data: { imageUrl: url },

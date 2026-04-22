@@ -2,6 +2,10 @@
 
 Sistema fullstack com **NestJS** (backend), **Next.js** (frontend), **PostgreSQL** e **Docker**.
 
+## Preview
+
+![Tela de Login](docs/image.png)
+
 ## Tecnologias
 
 | Camada | Tecnologia |
